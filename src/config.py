@@ -2,11 +2,11 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-CONFIG = ROOT / "config" / "config.yaml"
+CONFIG_PATH = ROOT / "config" / "config.yaml"
 
 
 def load_config():
-    with open(CONFIG, encoding="utf-8") as f:
+    with open(CONFIG_PATH, encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
 
     for key in ("mid_path", "soundfont"):
