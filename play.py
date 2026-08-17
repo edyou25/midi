@@ -28,7 +28,6 @@ def main():
 
     def toggle_play():
         player.toggle()
-
         viewer.play_button.setText(
             "Play" if player.paused else "Pause"
         )
@@ -45,6 +44,9 @@ def main():
 
     viewer.play_button.clicked.connect(toggle_play)
     viewer.view.time_clicked.connect(seek)
+    viewer.track_play_changed.connect(
+        player.set_track_enabled
+    )
 
     timer = QTimer()
     timer.timeout.connect(update)

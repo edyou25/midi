@@ -7,30 +7,23 @@ import mido
 
 
 class MidiPlayer:
-    def __init__(
-        self,
-        mid_path,
-        soundfont,
-        driver="pulseaudio",
-    ):
+    def __init__(self, mid_path, soundfont, driver="pulseaudio"):
         self.mid = mido.MidiFile(mid_path)
         self.soundfont = str(soundfont)
         self.driver = driver
 
         self.events = self._build_events()
-        self.times = [t for t, _ in self.events]
+        self.times = [t for t, _, _ in self.events]
+        self.enabled_tracks = set(range(len(self.mid.tracks)))
 
         self.position = 0.0
-
         self._seek_to = None
 
         self._stop = threading.Event()
-
         self._paused = threading.Event()
         self._paused.set()
 
         self._lock = threading.Lock()
-
         self._thread = None
         self._synth = None
 
@@ -38,25 +31,67 @@ class MidiPlayer:
     def paused(self):
         return self._paused.is_set()
 
-    def _build_events(self):
-        tempo = 500000
-        seconds = 0.0
-
+    def _tempo_events(self):
         events = []
 
-        for msg in mido.merge_tracks(self.mid.tracks):
+        for track in self.mid.tracks:
+            tick = 0
+            for msg in track:
+                tick += msg.time
+                if msg.type == "set_tempo":
+                    events.append((tick, msg.tempo))
+
+        events.sort()
+        return events
+
+    def _tick_to_seconds(self, target_tick, tempo_events):
+        tempo = 500000
+        last_tick = 0
+        seconds = 0.0
+
+        for tick, new_tempo in tempo_events:
+            if tick > target_tick:
+                break
+
             seconds += mido.tick2second(
-                msg.time,
+                tick - last_tick,
                 self.mid.ticks_per_beat,
                 tempo,
             )
+            last_tick = tick
+            tempo = new_tempo
 
-            if msg.type == "set_tempo":
-                tempo = msg.tempo
+        return seconds + mido.tick2second(
+            target_tick - last_tick,
+            self.mid.ticks_per_beat,
+            tempo,
+        )
 
-            elif not msg.is_meta:
-                events.append((seconds, msg))
+    def _build_events(self):
+        tempo_events = self._tempo_events()
+        events = []
 
+        for track_id, track in enumerate(self.mid.tracks):
+            tick = 0
+
+            for msg in track:
+                tick += msg.time
+
+                if msg.is_meta:
+                    continue
+
+                events.append(
+                    (
+                        self._tick_to_seconds(
+                            tick,
+                            tempo_events,
+                        ),
+                        track_id,
+                        msg,
+                    )
+                )
+
+        events.sort(key=lambda item: item[0])
         return events
 
     def _send(self, msg):
@@ -103,33 +138,27 @@ class MidiPlayer:
             return
 
         for channel in range(16):
-            self._synth.cc(
-                channel,
-                123,
-                0,
-            )
+            self._synth.cc(channel, 123, 0)
 
     def _restore_state(self, target):
-        for t, msg in self.events:
+        for t, track_id, msg in self.events:
             if t >= target:
                 break
 
-            if msg.type in (
-                "program_change",
-                "control_change",
+            if (
+                track_id in self.enabled_tracks
+                and msg.type in (
+                    "program_change",
+                    "control_change",
+                )
             ):
                 self._send(msg)
 
     def start(self):
         self._synth = fluidsynth.Synth()
+        self._synth.start(driver=self.driver)
 
-        self._synth.start(
-            driver=self.driver
-        )
-
-        sfid = self._synth.sfload(
-            self.soundfont
-        )
+        sfid = self._synth.sfload(self.soundfont)
 
         for channel in range(16):
             self._synth.program_select(
@@ -139,7 +168,6 @@ class MidiPlayer:
                 0,
             )
 
-        # General MIDI drum channel
         self._synth.program_select(
             9,
             sfid,
@@ -151,69 +179,50 @@ class MidiPlayer:
             target=self._run,
             daemon=True,
         )
-
         self._thread.start()
 
     def _run(self):
         index = 0
-
         clock = time.monotonic()
 
         try:
             while not self._stop.is_set():
-
                 with self._lock:
                     target = self._seek_to
                     self._seek_to = None
 
                 if target is not None:
                     self._all_notes_off()
-
                     self._restore_state(target)
-
                     index = bisect_left(
                         self.times,
                         target,
                     )
-
                     self.position = target
-
-                    clock = (
-                        time.monotonic()
-                        - self.position
-                    )
+                    clock = time.monotonic() - target
 
                 if self.paused:
-                    clock = (
-                        time.monotonic()
-                        - self.position
-                    )
-
+                    clock = time.monotonic() - self.position
                     time.sleep(0.01)
                     continue
 
-                self.position = (
-                    time.monotonic()
-                    - clock
-                )
+                self.position = time.monotonic() - clock
 
                 while (
                     index < len(self.events)
-                    and self.events[index][0]
-                    <= self.position
+                    and self.events[index][0] <= self.position
                 ):
-                    self._send(
-                        self.events[index][1]
-                    )
+                    _, track_id, msg = self.events[index]
+
+                    if track_id in self.enabled_tracks:
+                        self._send(msg)
 
                     index += 1
 
                 if index >= len(self.events):
                     self.position = self.mid.length
-
                     self._paused.set()
                     self._all_notes_off()
-
                     time.sleep(0.01)
                     continue
 
@@ -227,7 +236,7 @@ class MidiPlayer:
 
     def play(self):
         if self.position >= self.mid.length:
-            self.seek(0)
+            self.seek(0.0)
 
         self._paused.clear()
 
@@ -254,6 +263,13 @@ class MidiPlayer:
             self._seek_to = target
 
         self.position = target
+
+    def set_track_enabled(self, track_id, enabled):
+        if enabled:
+            self.enabled_tracks.add(track_id)
+        else:
+            self.enabled_tracks.discard(track_id)
+            self._all_notes_off()
 
     def stop(self):
         self._stop.set()
