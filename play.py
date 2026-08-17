@@ -1,103 +1,143 @@
-import time
+import sys
 import threading
+import time
 
 import fluidsynth
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
+import mido
 
-from plot import plot_midi, load_config
+from PySide6.QtCore import QTimer
+from PySide6.QtWidgets import QApplication
+
+from plot import create_viewer
+from src.config import load_config
 
 
-config = load_config()
-
-fig, ax, cursor, time_text, mid = plot_midi(
-    show=False,
-    cursor=True
-)
-
-duration = mid.length
+cfg = load_config()
+mid = mido.MidiFile(cfg["mid_path"])
 
 state = {
     "start": None,
-    "done": False
 }
 
-
-def format_time(seconds):
-    m = int(seconds // 60)
-    s = int(seconds % 60)
-    return f"{m:02d}:{s:02d}"
+stop = threading.Event()
 
 
-def play():
-    fs = fluidsynth.Synth()
-    fs.start(driver="pulseaudio")
+def play_midi():
+    synth = fluidsynth.Synth()
 
-    sfid = fs.sfload(config["soundfont"])
+    synth.start(
+        driver=cfg.get(
+            "audio_driver",
+            "pulseaudio",
+        )
+    )
 
-    for ch in range(16):
-        fs.program_select(ch, sfid, 0, 0)
+    sfid = synth.sfload(
+        str(cfg["soundfont"])
+    )
+
+    for channel in range(16):
+        synth.program_select(
+            channel,
+            sfid,
+            0,
+            0,
+        )
+
+    # General MIDI percussion channel
+    synth.program_select(
+        9,
+        sfid,
+        128,
+        0,
+    )
 
     state["start"] = time.monotonic()
 
-    for msg in mid.play():
+    try:
+        for msg in mid.play():
+            if stop.is_set():
+                break
 
-        if msg.is_meta:
-            continue
+            if msg.is_meta:
+                continue
 
-        if msg.type == "note_on":
-            if msg.velocity > 0:
-                fs.noteon(msg.channel, msg.note, msg.velocity)
-            else:
-                fs.noteoff(msg.channel, msg.note)
+            if msg.type == "note_on":
+                if msg.velocity:
+                    synth.noteon(
+                        msg.channel,
+                        msg.note,
+                        msg.velocity,
+                    )
+                else:
+                    synth.noteoff(
+                        msg.channel,
+                        msg.note,
+                    )
 
-        elif msg.type == "note_off":
-            fs.noteoff(msg.channel, msg.note)
+            elif msg.type == "note_off":
+                synth.noteoff(
+                    msg.channel,
+                    msg.note,
+                )
 
-        elif msg.type == "program_change":
-            fs.program_change(msg.channel, msg.program)
+            elif msg.type == "program_change":
+                synth.program_change(
+                    msg.channel,
+                    msg.program,
+                )
 
-        elif msg.type == "control_change":
-            fs.cc(msg.channel, msg.control, msg.value)
+            elif msg.type == "control_change":
+                synth.cc(
+                    msg.channel,
+                    msg.control,
+                    msg.value,
+                )
 
-    state["done"] = True
+    finally:
+        for channel in range(16):
+            synth.cc(channel, 123, 0)
 
-    for ch in range(16):
-        fs.cc(ch, 123, 0)
-
-    fs.delete()
+        synth.delete()
 
 
-def update(_):
-    if state["start"] is None:
-        return cursor, time_text
+def main():
+    app = QApplication(sys.argv)
 
-    elapsed = min(
-        time.monotonic() - state["start"],
-        duration
+    viewer = create_viewer(
+        show_cursor=True
     )
 
-    cursor.set_xdata([elapsed, elapsed])
+    viewer.show()
 
-    time_text.set_text(
-        f"{format_time(elapsed)} / {format_time(duration)}"
+    timer = QTimer()
+
+    def update():
+        if state["start"] is not None:
+            viewer.set_time(
+                time.monotonic()
+                - state["start"]
+            )
+
+    timer.timeout.connect(update)
+    timer.start(50)
+
+    thread = threading.Thread(
+        target=play_midi,
+        daemon=True,
     )
 
-    return cursor, time_text
+    QTimer.singleShot(
+        200,
+        thread.start,
+    )
+
+    app.aboutToQuit.connect(
+        stop.set
+    )
+
+    sys.exit(app.exec())
 
 
-ani = FuncAnimation(
-    fig,
-    update,
-    interval=50,
-    cache_frame_data=False
-)
-
-thread = threading.Thread(
-    target=play,
-    daemon=True
-)
-
-thread.start()
-
-plt.show()
+if __name__ == "__main__":
+    main()

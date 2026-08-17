@@ -1,2 +1,3 @@
-mid_path: /home/yyf/midi/downloads/QueenBohemianRhapsody.mid
+mid_path: downloads/QueenBohemianRhapsody.mid
 soundfont: /usr/share/sounds/sf2/FluidR3_GM.sf2
+audio_driver: pulseaudio
