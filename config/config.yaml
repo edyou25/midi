@@ -1,3 +1,4 @@
-mid_path: downloads/QueenBohemianRhapsody.mid
+mid_path: downloads/BohemianRhapsody.mid
+# mid_path: downloads/CallofSilence.mid
 soundfont: /usr/share/sounds/sf2/FluidR3_GM.sf2
 audio_driver: pulseaudio

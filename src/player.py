@@ -26,6 +26,28 @@ class MidiPlayer:
         self._lock = threading.Lock()
         self._thread = None
         self._synth = None
+        self.track_base_volumes = {}
+
+        for track_id, track in enumerate(
+            self.mid.tracks
+        ):
+            velocities = [
+                msg.velocity
+                for msg in track
+                if msg.type == "note_on"
+                and msg.velocity > 0
+            ]
+
+            self.track_base_volumes[
+                track_id
+            ] = (
+                sum(velocities) / len(velocities)
+                if velocities
+                else 127
+            )
+        self.track_volumes = dict(
+            self.track_base_volumes
+        )
 
     @property
     def paused(self):
@@ -141,16 +163,14 @@ class MidiPlayer:
             self._synth.cc(channel, 123, 0)
 
     def _restore_state(self, target):
-        for t, track_id, msg in self.events:
-            if t >= target:
+        for t, _, msg in self.events:
+            if t > target:
                 break
 
-            if (
-                track_id in self.enabled_tracks
-                and msg.type in (
-                    "program_change",
-                    "control_change",
-                )
+            if msg.type in (
+                "program_change",
+                "control_change",
+                "pitchwheel",
             ):
                 self._send(msg)
 
@@ -167,6 +187,8 @@ class MidiPlayer:
                 0,
                 0,
             )
+
+        self._restore_state(1e-6)
 
         self._synth.program_select(
             9,
@@ -214,8 +236,49 @@ class MidiPlayer:
                 ):
                     _, track_id, msg = self.events[index]
 
-                    if track_id in self.enabled_tracks:
+                    is_note = msg.type in (
+                        "note_on",
+                        "note_off",
+                    )
+
+                    if not is_note:
                         self._send(msg)
+
+                    elif track_id in self.enabled_tracks:
+                        if (
+                            msg.type == "note_on"
+                            and msg.velocity > 0
+                        ):
+                            base = self.track_base_volumes[
+                                track_id
+                            ]
+
+                            target = self.track_volumes[
+                                track_id
+                            ]
+
+                            scale = (
+                                target / base
+                                if base > 0
+                                else 1.0
+                            )
+
+                            velocity = int(
+                                msg.velocity * scale
+                            )
+
+                            if velocity > 0:
+                                self._send(
+                                    msg.copy(
+                                        velocity=min(
+                                            velocity,
+                                            127,
+                                        )
+                                    )
+                                )
+
+                        else:
+                            self._send(msg)
 
                     index += 1
 
@@ -267,6 +330,11 @@ class MidiPlayer:
     def set_track_enabled(self, track_id, enabled):
         if enabled:
             self.enabled_tracks.add(track_id)
+
+            # Ensure current instrument/controller state is correct.
+            if self._synth:
+                self._restore_state(self.position)
+
         else:
             self.enabled_tracks.discard(track_id)
             self._all_notes_off()
@@ -274,3 +342,18 @@ class MidiPlayer:
     def stop(self):
         self._stop.set()
         self._all_notes_off()
+    
+    def set_track_volume(
+        self,
+        track_id,
+        volume,
+    ):
+        self.track_volumes[
+            track_id
+        ] = max(
+            0,
+            min(
+                float(volume),
+                127,
+            ),
+        )

@@ -47,6 +47,9 @@ def main():
     viewer.track_play_changed.connect(
         player.set_track_enabled
     )
+    viewer.track_volume_changed.connect(
+        player.set_track_volume
+    )
 
     timer = QTimer()
     timer.timeout.connect(update)

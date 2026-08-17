@@ -150,3 +150,18 @@ def instrument_name(track):
         programs.append("Acoustic Grand Piano")
 
     return " / ".join(programs) or "Unknown"
+
+def average_velocity(track):
+    values = [
+        msg.velocity
+        for msg in track
+        if msg.type == "note_on"
+        and msg.velocity > 0
+    ]
+
+    if not values:
+        return 0
+
+    return round(
+        sum(values) / len(values)
+    )

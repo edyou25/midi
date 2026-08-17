@@ -1,4 +1,4 @@
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QGridLayout,
@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QPushButton,
     QScrollArea,
+    QSlider,
     QVBoxLayout,
     QWidget,
 )
@@ -14,18 +15,21 @@ from PySide6.QtWidgets import (
 class TrackPanel(QWidget):
     visibility_changed = Signal(int, bool)
     playback_changed = Signal(int, bool)
+    volume_changed = Signal(int, float)
 
     def __init__(self, tracks, color_fn):
         super().__init__()
 
         self.show_checks = {}
         self.play_checks = {}
+        self.volume_sliders = {}
 
-        self.setFixedWidth(360)
+        self.setFixedWidth(470)
 
         layout = QVBoxLayout(self)
+
         layout.addWidget(
-            QLabel("Show   Play   Track / Instrument")
+            QLabel("Show   Play   Volume        Track / Instrument")
         )
 
         buttons = QGridLayout()
@@ -61,8 +65,9 @@ class TrackPanel(QWidget):
         content = QWidget()
         rows = QVBoxLayout(content)
 
-        for track_id, name in tracks:
+        for track_id, name, avg_velocity in tracks:
             row = QWidget()
+
             row_layout = QHBoxLayout(row)
             row_layout.setContentsMargins(0, 0, 0, 0)
 
@@ -72,12 +77,25 @@ class TrackPanel(QWidget):
             show_check.setChecked(True)
             play_check.setChecked(True)
 
-            show_check.setToolTip("Show track")
-            play_check.setToolTip("Play track")
+            volume_slider = QSlider(Qt.Horizontal)
+
+            volume_slider.setRange(
+                0,
+                127,
+            )
+
+            volume_slider.setValue(
+                avg_velocity
+            )
+
+            volume_label = QLabel(
+                str(avg_velocity)
+            )
 
             label = QLabel(
                 f"{track_id}: {name}"
             )
+
             label.setStyleSheet(
                 f"color: {color_fn(track_id).name()};"
             )
@@ -98,11 +116,25 @@ class TrackPanel(QWidget):
                     )
             )
 
+            volume_slider.valueChanged.connect(
+                lambda value,
+                tid=track_id,
+                text=volume_label:
+                    self._volume_changed(
+                        tid,
+                        value,
+                        text,
+                    )
+            )
+
             self.show_checks[track_id] = show_check
             self.play_checks[track_id] = play_check
+            self.volume_sliders[track_id] = volume_slider
 
             row_layout.addWidget(show_check)
             row_layout.addWidget(play_check)
+            row_layout.addWidget(volume_slider)
+            row_layout.addWidget(volume_label)
             row_layout.addWidget(label, 1)
 
             rows.addWidget(row)
@@ -112,16 +144,36 @@ class TrackPanel(QWidget):
         scroll.setWidget(content)
 
         layout.addWidget(scroll, 1)
+
         layout.addWidget(
             QLabel(
                 "Click: seek   Drag: pan   Ctrl+wheel: zoom"
             )
         )
 
-    def set_all_visible(self, visible):
+    def _volume_changed(
+        self,
+        track_id,
+        value,
+        label,
+    ):
+        label.setText(str(value))
+
+        self.volume_changed.emit(
+            track_id,
+            float(value),
+        )
+
+    def set_all_visible(
+        self,
+        visible,
+    ):
         for check in self.show_checks.values():
             check.setChecked(visible)
 
-    def set_all_playback(self, enabled):
+    def set_all_playback(
+        self,
+        enabled,
+    ):
         for check in self.play_checks.values():
             check.setChecked(enabled)
