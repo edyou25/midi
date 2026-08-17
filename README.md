@@ -1,15 +1,82 @@
 # MIDI Viewer / Player
 
+#### mido message
+https://mido.readthedocs.io/en/latest/message_types.html
+
+```mermaid
+flowchart TB
+
+    C0["Channel 0<br/>Piano"]
+    C1["Channel 1<br/>Bass"]
+
+    M1["Msg<br/>note_on<br/>ch=0, note=60"]
+    M2["Msg<br/>note_off<br/>ch=0, note=60"]
+    M3["Msg<br/>note_on<br/>ch=1, note=36"]
+
+    T["Track 1"]
+
+    C0 --> M1
+    C0 --> M2
+    C1 --> M3
+
+    M1 --> T
+    M2 --> T
+    M3 --> T
+```
+
+
+#### soundfont
 ```bash
-(midi) yyf@Javis:~/midi-main$ tree
-.
+sudo apt install fluidsynth fluid-soundfont-gm
+```
+```bash
+sudo wget -O /usr/share/sounds/sf2/GeneralUser-GS.sf2 \
+https://raw.githubusercontent.com/mrbumpy409/GeneralUser-GS/main/GeneralUser-GS.sf2
+```
+
+#### workflow
+```mermaid
+flowchart TB
+
+    A[File Loader]
+    B[Mido Parser]
+    C[Timeline / bisect]
+
+    D[Qt GUI]
+    E[Playback Controller]
+
+    F[SoundFont Loader]
+    G[FluidSynth]
+    H[Audio Output]
+
+    A -->|.mid| B
+    B -->|notes / tracks / tempo| C
+
+    C -->|current notes| D
+    D -->|play / pause / seek| E
+    E -->|current time| C
+
+    B -->|MIDI events| E
+    E -->|MIDI events| G
+
+    F -->|.sf2| G
+    G -->|audio stream| H
+```
+
+#### files
+
+```bash
+midi
 ├── config
 │   ├── config.yaml
 │   └── default.yaml
 ├── downloads
 │   ├── BohemianRhapsody.mid
 │   ├── CallofSilence.mid
+│   ├── CanonInD.mid
 │   ├── KamadoTanjiro.mid
+│   ├── Mario.mid
+│   └── Oasis.mid
 │   └── OnePunchMan.mid
 ├── environment.yml
 ├── generate.py
@@ -26,6 +93,8 @@
     └── track_panel.py
 ```
 
+#### midi
+
 
 Shell:
 ```bash
@@ -36,6 +105,15 @@ curl -L "https://bitmidi.com/uploads/87216.mid" \
 curl -fL "https://www.mfiles.co.uk/downloads/pachelbel-canon-in-d.mid" \
   -o downloads/CanonInD.mid
 ```
+```bash
+curl -fL "https://bitmidi.com/uploads/40597.mid" \
+  -o downloads/Oasis.mid
+```
+```bash
+curl -fL "https://www.vgmusic.com/new-files/smb-overworld.mid" \
+  -o downloads/Mario.mid
+```
+
 Web Console:
 - https://onlinesequencer.net/2113053
 - https://onlinesequencer.net/1668689
@@ -43,6 +121,8 @@ Web Console:
 ```Javascript
 exportMidi()
 ```
+
+#### FluidR3_GM.sf2
 
 | Program | Instrument              | Program | Instrument           |
 | ------: | ----------------------- | ------: | -------------------- |
