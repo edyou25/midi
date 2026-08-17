@@ -50,6 +50,9 @@ def main():
     viewer.track_volume_changed.connect(
         player.set_track_volume
     )
+    viewer.track_instrument_changed.connect(
+        player.set_track_instrument
+    )
 
     timer = QTimer()
     timer.timeout.connect(update)

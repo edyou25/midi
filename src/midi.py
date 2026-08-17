@@ -165,3 +165,19 @@ def average_velocity(track):
     return round(
         sum(values) / len(values)
     )
+
+def track_program(track):
+    for msg in track:
+        if msg.type == "program_change":
+            return msg.program
+
+    return 0
+
+
+def is_drum_track(track):
+    return any(
+        hasattr(msg, "channel")
+        and msg.channel == 9
+        and msg.type in ("note_on", "note_off")
+        for msg in track
+    )

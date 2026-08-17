@@ -13,10 +13,13 @@ from PySide6.QtWidgets import (
 )
 
 from src.midi import (
+    GM_INSTRUMENTS,
     average_velocity,
     extract_notes,
     instrument_name,
+    is_drum_track,
     load_midi,
+    track_program,
 )
 from src.track_panel import TrackPanel
 
@@ -69,6 +72,7 @@ class PianoRoll(QGraphicsView):
 class MidiViewer(QWidget):
     track_play_changed = Signal(int, bool)
     track_volume_changed = Signal(int, float)
+    track_instrument_changed = Signal(int, int)
 
     def __init__(
         self,
@@ -136,10 +140,20 @@ class MidiViewer(QWidget):
                 average_velocity(
                     self.mid.tracks[track_id]
                 ),
+                track_program(
+                    self.mid.tracks[track_id]
+                ),
+                is_drum_track(
+                    self.mid.tracks[track_id]
+                ),
             )
             for track_id in sorted(self.items)
         ]
-        self.track_panel = TrackPanel(tracks, self._color)
+        self.track_panel = TrackPanel(
+            tracks,
+            self._color,
+            GM_INSTRUMENTS,
+        )
         self.track_panel.visibility_changed.connect(
             self.set_track_visible
         )
@@ -148,6 +162,9 @@ class MidiViewer(QWidget):
         )
         self.track_panel.volume_changed.connect(
             self.track_volume_changed
+        )
+        self.track_panel.instrument_changed.connect(
+            self.track_instrument_changed
         )
 
         layout = QHBoxLayout(self)

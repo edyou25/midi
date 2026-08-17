@@ -27,6 +27,7 @@ class MidiPlayer:
         self._thread = None
         self._synth = None
         self.track_base_volumes = {}
+        self.track_programs = {}
 
         for track_id, track in enumerate(
             self.mid.tracks
@@ -175,7 +176,9 @@ class MidiPlayer:
                 self._send(msg)
 
     def start(self):
-        self._synth = fluidsynth.Synth()
+        self._synth = fluidsynth.Synth(
+            **{"audio.realtime-prio": 0}
+        )
         self._synth.start(driver=self.driver)
 
         sfid = self._synth.sfload(self.soundfont)
@@ -241,7 +244,11 @@ class MidiPlayer:
                         "note_off",
                     )
 
-                    if not is_note:
+                    if msg.type == "program_change":
+                        if track_id not in self.track_programs:
+                            self._send(msg)
+
+                    elif not is_note:
                         self._send(msg)
 
                     elif track_id in self.enabled_tracks:
@@ -357,3 +364,27 @@ class MidiPlayer:
                 127,
             ),
         )
+
+    def set_track_instrument(
+        self,
+        track_id,
+        program,
+    ):
+        self.track_programs[track_id] = program
+
+        if not self._synth:
+            return
+
+        channels = {
+            msg.channel
+            for _, tid, msg in self.events
+            if tid == track_id
+            and hasattr(msg, "channel")
+            and msg.channel != 9
+        }
+
+        for channel in channels:
+            self._synth.program_change(
+                channel,
+                program,
+            )
