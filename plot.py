@@ -6,12 +6,16 @@ from src.config import load_config
 from src.plotter import MidiViewer
 
 
-def create_viewer(show_cursor=False):
+def create_viewer(
+    show_cursor=False,
+    playback_controls=False,
+):
     cfg = load_config()
 
     return MidiViewer(
         cfg["mid_path"],
         show_cursor=show_cursor,
+        playback_controls=playback_controls,
     )
 
 
