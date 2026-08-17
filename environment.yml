@@ -1,0 +1,11 @@
+name: midi
+
+dependencies:
+  - python=3.11
+  - pip
+
+  - pip:
+      - mido
+      - PyYAML
+      - pyfluidsynth
+      - PySide6
