@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from src.midi import extract_notes, load_midi, track_name
+from src.midi import extract_notes, load_midi, instrument_name
 
 PX_PER_SEC = 40
 NOTE_H = 7
@@ -184,9 +184,8 @@ class MidiViewer(QWidget):
         tracks = QVBoxLayout(content)
 
         for track_id in sorted(self.items):
-            name = track_name(
-                self.mid.tracks[track_id],
-                track_id,
+            name = instrument_name(
+                self.mid.tracks[track_id]
             )
 
             check = QCheckBox(
