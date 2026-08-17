@@ -44,6 +44,8 @@ class PianoRoll(QGraphicsView):
             QGraphicsView.ScrollHandDrag
         )
 
+        self._press_pos = None
+
     def wheelEvent(self, event):
         if (
             event.modifiers()
@@ -65,19 +67,45 @@ class PianoRoll(QGraphicsView):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
-            point = self.mapToScene(
+            self._press_pos = (
                 event.position().toPoint()
             )
 
-            seconds = max(
-                0.0,
-                point.x() / PX_PER_SEC,
-            )
-
-            self.time_clicked.emit(seconds)
-
         super().mousePressEvent(event)
 
+    def mouseReleaseEvent(self, event):
+        super().mouseReleaseEvent(event)
+
+        if (
+            event.button() != Qt.LeftButton
+            or self._press_pos is None
+        ):
+            return
+
+        release_pos = (
+            event.position().toPoint()
+        )
+
+        distance = (
+            release_pos - self._press_pos
+        ).manhattanLength()
+
+        self._press_pos = None
+
+        # Only a real click triggers seek.
+        if distance > 5:
+            return
+
+        point = self.mapToScene(
+            release_pos
+        )
+
+        seconds = max(
+            0.0,
+            point.x() / PX_PER_SEC,
+        )
+
+        self.time_clicked.emit(seconds)
 
 class MidiViewer(QWidget):
     def __init__(
@@ -118,15 +146,15 @@ class MidiViewer(QWidget):
         self._draw_grid()
         self._draw_notes()
 
+        cursor_pen = QPen(QColor("white"), 2)
+        cursor_pen.setCosmetic(True)
+
         self.cursor = self.scene.addLine(
             0,
             0,
             0,
             self.scene_height,
-            QPen(
-                QColor("white"),
-                2,
-            ),
+            cursor_pen,
         )
 
         self.cursor.setZValue(10)
