@@ -32,10 +32,14 @@ Shell:
 curl -L "https://bitmidi.com/uploads/87216.mid" \
   -o downloads/BohemianRhapsody.mid
 ```
+```bash
+curl -fL "https://www.mfiles.co.uk/downloads/pachelbel-canon-in-d.mid" \
+  -o downloads/CanonInD.mid
+```
 Web Console:
-https://onlinesequencer.net/2113053
-https://onlinesequencer.net/1668689
-https://onlinesequencer.net/206014
+- https://onlinesequencer.net/2113053
+- https://onlinesequencer.net/1668689
+- https://onlinesequencer.net/206014
 ```Javascript
 exportMidi()
 ```
