@@ -1,5 +1,31 @@
 # MIDI Viewer / Player
 
+```bash
+(midi) yyf@Javis:~/midi-main$ tree
+.
+├── config
+│   ├── config.yaml
+│   └── default.yaml
+├── downloads
+│   ├── BohemianRhapsody.mid
+│   ├── CallofSilence.mid
+│   ├── KamadoTanjiro.mid
+│   └── OnePunchMan.mid
+├── environment.yml
+├── generate.py
+├── outputs
+├── play.py
+├── plot.py
+├── README.md
+└── src
+    ├── config.py
+    ├── __init__.py
+    ├── midi.py
+    ├── player.py
+    ├── plotter.py
+    └── track_panel.py
+```
+
 
 Shell:
 ```bash
@@ -9,6 +35,7 @@ curl -L "https://bitmidi.com/uploads/87216.mid" \
 Web Console:
 https://onlinesequencer.net/2113053
 https://onlinesequencer.net/1668689
+https://onlinesequencer.net/206014
 ```Javascript
 exportMidi()
 ```
