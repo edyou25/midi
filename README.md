@@ -1,7 +1,43 @@
 # MIDI Viewer / Player
 
+<img src="assets/cannon.png" width="100%">
+
+#### examples
+<table>
+  <tr>
+    <td width="50%">
+      <img src="assets/basic.png" width="100%">
+    </td>
+    <td width="50%">
+      <img src="assets/cannon.png" width="100%">
+    </td>
+  </tr>
+
+  <tr>
+    <td width="50%">
+      <img src="assets/mario.png" width="100%">
+    </td>
+    <td width="50%">
+      <img src="assets/queen.png" width="100%">
+    </td>
+  </tr>
+
+  <tr>
+    <td width="50%">
+      <img src="assets/saitama.png" width="100%">
+    </td>
+    <td width="50%">
+      <img src="assets/tanjiro.png" width="100%">
+    </td>
+  </tr>
+</table>
+
 #### mido message
 https://mido.readthedocs.io/en/latest/message_types.html
+
+#### spectrogram
+https://github.com/edyou25/chrome-music-lab.git
+
 
 ```mermaid
 flowchart TB

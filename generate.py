@@ -67,7 +67,7 @@ for note in notes:
             "note_off",
             note=note,
             velocity=0,
-            time=480,
+            time=960,
             channel=0,
         )
     )
@@ -109,7 +109,7 @@ chords = [
 
 
 # Wait until all scales finish.
-delay = len(notes) * 480
+delay = len(notes) * 960
 
 first_chord = True
 
