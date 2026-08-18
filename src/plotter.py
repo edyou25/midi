@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
+from src.spectrum.spectrogram_gl import SpectrogramGL
 from src.midi import (
     GM_INSTRUMENTS,
     average_velocity,
@@ -167,8 +167,20 @@ class MidiViewer(QWidget):
             self.track_instrument_changed
         )
 
+        left = QVBoxLayout()
+        left.setContentsMargins(0, 0, 0, 0)
+        left.setSpacing(4)
+
+        left.addWidget(self.track_panel, 1)
+
+        self.spectrogram = None
+        if playback_controls:
+            self.spectrogram = SpectrogramGL(self)
+            self.spectrogram.setFixedWidth(470)
+            left.addWidget(self.spectrogram, 0)
+
         layout = QHBoxLayout(self)
-        layout.addWidget(self.track_panel)
+        layout.addLayout(left)
         layout.addLayout(main, 1)
 
         self.setWindowTitle(str(mid_path))

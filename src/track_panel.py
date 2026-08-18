@@ -28,7 +28,13 @@ class TrackPanel(QWidget):
         self.labels = {}
 
         self.setFixedWidth(470)
-
+        self.setStyleSheet("""
+            QLabel, QCheckBox, QComboBox, QPushButton {
+                font-size: 10px;
+            }
+            QPushButton { padding: 1px 4px; }
+            QComboBox { padding: 0px; }
+        """)
         layout = QVBoxLayout(self)
 
         layout.addWidget(
@@ -67,7 +73,8 @@ class TrackPanel(QWidget):
 
         content = QWidget()
         rows = QVBoxLayout(content)
-
+        rows.setSpacing(0)
+        rows.setContentsMargins(2, 2, 2, 2)
         for (
             track_id,
             track_name,
@@ -77,9 +84,11 @@ class TrackPanel(QWidget):
         ) in tracks:
 
             row = QWidget()
+            row.setFixedHeight(23)
             row_layout = QHBoxLayout(row)
-            row_layout.setContentsMargins(0, 0, 0, 0)
-
+            row_layout.setContentsMargins(1, 0, 1, 0)
+            row_layout.setSpacing(3)
+            
             # Show / Play
             show_check = QCheckBox()
             play_check = QCheckBox()
